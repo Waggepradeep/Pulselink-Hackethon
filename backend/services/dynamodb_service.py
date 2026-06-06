@@ -357,8 +357,17 @@ class DynamoDBService:
         
         req['donor_responses'][donor_id] = response
 
-        if response == "accepted":
+        # Check if there is at least one 'accepted' donor response
+        has_accepted = any(status == 'accepted' for status in req['donor_responses'].values())
+        if has_accepted:
             req['status'] = "fulfilled"
+        else:
+            # Revert to 'escalated' or 'open' if it was fulfilled but has no accepted responses anymore
+            if req.get('status') == "fulfilled":
+                if len(req.get('escalation_history', [])) > 0:
+                    req['status'] = "escalated"
+                else:
+                    req['status'] = "open"
 
         if self.use_mock:
             logger.info(f"Mock Mode: Updated request {request_id} response for {donor_id} to {response}")

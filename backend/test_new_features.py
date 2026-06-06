@@ -155,6 +155,35 @@ class TestNewFeatures(unittest.TestCase):
         self.assertEqual(updated_req["donor_responses"]["donor_2"], "accepted")
         self.assertEqual(updated_req["status"], "fulfilled")
 
+        # Revert response to declined
+        payload3 = OutreachResponseUpdateRequest(
+            request_id=request_id,
+            donor_id="donor_2",
+            response="declined"
+        )
+        res3 = update_outreach_response_endpoint(payload3, db_service=self.db_service)
+        self.assertTrue(res3["success"])
+        
+        # Verify status reverts to open
+        updated_req = self.db_service.get_blood_request(request_id)
+        self.assertEqual(updated_req["donor_responses"]["donor_2"], "declined")
+        self.assertEqual(updated_req["status"], "open")
+
+        # Now simulate escalation context revert
+        updated_req["status"] = "fulfilled"
+        updated_req["escalation_history"] = [{"level": 1}]
+        updated_req["donor_responses"]["donor_2"] = "accepted"
+        self.db_service.mock_requests = [r for r in self.db_service.mock_requests if r["request_id"] != request_id]
+        self.db_service.save_blood_request(updated_req)
+
+        # Revert response to declined again
+        res4 = update_outreach_response_endpoint(payload3, db_service=self.db_service)
+        self.assertTrue(res4["success"])
+        
+        # Verify status reverts to escalated (since escalation_history is not empty)
+        updated_req = self.db_service.get_blood_request(request_id)
+        self.assertEqual(updated_req["status"], "escalated")
+
     def test_escalation_logic(self):
         # 3. Test Escalation Logic
         request_id = str(uuid.uuid4())
