@@ -144,6 +144,15 @@ Pulselink-Hackethon/
 
 ---
 
+### 4. Running Tests
+To run the automated tests for the newly implemented closed-loop donor response tracking and escalation features, run:
+```bash
+python -m unittest backend.test_new_features
+```
+This test suite runs locally in DynamoDB mock mode, requiring no AWS credentials.
+
+---
+
 ## 💉 Blood Compatibility Rules
 
 This app implements the following compatibility logic:
