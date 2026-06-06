@@ -30,6 +30,7 @@ class DynamoDBService:
         self.table_name = table_name
         self.use_mock = False
         self.mock_data = []
+        self.mock_requests = []
         self.table = None
 
         try:
@@ -277,7 +278,8 @@ class DynamoDBService:
                 db_item[k] = v
 
         if self.use_mock:
-            # In mock mode, just log and return success
+            # In mock mode, save to memory and return success
+            self.mock_requests.append(db_item)
             logger.info(f"Mock Mode: Saved blood request {db_item.get('request_id')}")
             return True
         try:
@@ -302,6 +304,107 @@ class DynamoDBService:
             return True
         except Exception as e:
             logger.error(f"Error saving blood request: {e}")
+            return False
+
+    def get_blood_request(self, request_id: str) -> dict:
+        """Retrieves a single blood request by request_id."""
+        if self.use_mock:
+            for req in self.mock_requests:
+                if req.get('request_id') == request_id:
+                    return req
+            return None
+        try:
+            requests_table = self.dynamodb.Table("BloodBridge_Requests")
+            response = requests_table.get_item(Key={'request_id': request_id})
+            return response.get('Item')
+        except Exception as e:
+            logger.error(f"Error fetching request {request_id}: {e}")
+            return None
+
+    def get_all_requests(self) -> list[dict]:
+        """Retrieves all blood requests from database."""
+        if self.use_mock:
+            return self.mock_requests
+        try:
+            requests_table = self.dynamodb.Table("BloodBridge_Requests")
+            try:
+                requests_table.load()
+            except Exception:
+                return []
+            response = requests_table.scan()
+            items = response.get('Items', [])
+            while 'LastEvaluatedKey' in response:
+                response = requests_table.scan(ExclusiveStartKey=response['LastEvaluatedKey'])
+                items.extend(response.get('Items', []))
+            try:
+                items.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+            except Exception:
+                pass
+            return items
+        except Exception as e:
+            logger.error(f"Error scanning requests: {e}")
+            return []
+
+    def update_request_response(self, request_id: str, donor_id: str, response: str) -> bool:
+        """Updates a request's donor response map and overall request status."""
+        req = self.get_blood_request(request_id)
+        if not req:
+            logger.error(f"Request {request_id} not found for updating response.")
+            return False
+
+        if 'donor_responses' not in req:
+            req['donor_responses'] = {}
+        
+        req['donor_responses'][donor_id] = response
+
+        if response == "accepted":
+            req['status'] = "fulfilled"
+
+        if self.use_mock:
+            logger.info(f"Mock Mode: Updated request {request_id} response for {donor_id} to {response}")
+            return True
+
+        try:
+            requests_table = self.dynamodb.Table("BloodBridge_Requests")
+            requests_table.put_item(Item=req)
+            logger.info(f"DynamoDB Mode: Updated request {request_id} response for {donor_id} to {response}")
+            return True
+        except Exception as e:
+            logger.error(f"Error updating request response: {e}")
+            return False
+
+    def escalate_request_in_db(self, request_id: str, escalation_event: dict) -> bool:
+        """Updates request status to escalated and logs an escalation event."""
+        req = self.get_blood_request(request_id)
+        if not req:
+            logger.error(f"Request {request_id} not found for escalation.")
+            return False
+
+        req['status'] = "escalated"
+        if 'escalation_history' not in req:
+            req['escalation_history'] = []
+        
+        from decimal import Decimal
+        db_event = {}
+        for k, v in escalation_event.items():
+            if isinstance(v, float):
+                db_event[k] = Decimal(str(v))
+            else:
+                db_event[k] = v
+
+        req['escalation_history'].append(db_event)
+
+        if self.use_mock:
+            logger.info(f"Mock Mode: Escalated request {request_id}")
+            return True
+
+        try:
+            requests_table = self.dynamodb.Table("BloodBridge_Requests")
+            requests_table.put_item(Item=req)
+            logger.info(f"DynamoDB Mode: Escalated request {request_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error escalating request in DB: {e}")
             return False
 
     def pause_donor(self, user_id: str, reason: str = "") -> bool:

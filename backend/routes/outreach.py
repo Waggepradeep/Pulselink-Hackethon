@@ -139,3 +139,43 @@ def generate_bulk_outreach_endpoint(
             })
 
     return {"results": results}
+
+
+# --- Donor Response Tracking ---
+
+class OutreachResponseUpdateRequest(BaseModel):
+    request_id: str
+    donor_id: str
+    response: str
+
+class OutreachResponseUpdateResponse(BaseModel):
+    success: bool
+    message: str
+
+@router.patch("/outreach/response", response_model=OutreachResponseUpdateResponse)
+def update_outreach_response_endpoint(
+    payload: OutreachResponseUpdateRequest,
+    db_service: DynamoDBService = Depends(get_db_service)
+):
+    """
+    PATCH /api/outreach/response
+    Records donor response (accepted/declined/no_response) under a request's donor_responses.
+    """
+    try:
+        clean_resp = payload.response.strip().lower()
+        if clean_resp not in {"accepted", "declined", "no_response"}:
+            raise HTTPException(status_code=400, detail="Invalid response status. Must be 'accepted', 'declined', or 'no_response'.")
+
+        success = db_service.update_request_response(payload.request_id, payload.donor_id, clean_resp)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update outreach response.")
+
+        return {
+            "success": True,
+            "message": "Outreach response updated successfully."
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in update_outreach_response: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

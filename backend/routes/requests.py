@@ -178,3 +178,140 @@ def create_blood_request(
     except Exception as e:
         logger.error(f"Error creating blood request: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+# --- Helper for Serializing Decimals in Requests ---
+def serialize_decimals(obj):
+    if isinstance(obj, list):
+        return [serialize_decimals(i) for i in obj]
+    elif isinstance(obj, dict):
+        return {k: serialize_decimals(v) for k, v in obj.items()}
+    elif isinstance(obj, Decimal):
+        if obj % 1 == 0:
+            return int(obj)
+        return float(obj)
+    return obj
+
+
+# --- Request Status & Listing ---
+
+@router.get("/requests")
+def get_all_requests_endpoint(db_service: DynamoDBService = Depends(get_db_service)):
+    """
+    GET /api/requests
+    Returns all requests in the database.
+    """
+    try:
+        requests = db_service.get_all_requests()
+        serialized_requests = serialize_decimals(requests)
+        return {"requests": serialized_requests}
+    except Exception as e:
+        logger.error(f"Error in get_all_requests_endpoint: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Escalation Logic ---
+
+class EscalateRequestPayload(BaseModel):
+    request_id: str
+
+class EscalateRequestResponse(BaseModel):
+    success: bool
+    message: str
+    matched_donors: List[MatchedDonorBrief]
+
+@router.post("/requests/escalate", response_model=EscalateRequestResponse)
+def escalate_request_endpoint(
+    payload: EscalateRequestPayload,
+    db_service: DynamoDBService = Depends(get_db_service),
+    match_service: MatchingService = Depends(get_matching_service)
+):
+    """
+    POST /api/requests/escalate
+    Escalates a request by finding next 5 donors who have not been contacted yet.
+    """
+    try:
+        req = db_service.get_blood_request(payload.request_id)
+        if not req:
+            raise HTTPException(status_code=404, detail=f"Request with ID '{payload.request_id}' not found.")
+
+        # Get all contacted donors and count the ones with "no_response"
+        donor_responses = req.get('donor_responses', {})
+        
+        # Count only no_response ones
+        no_response_count = sum(1 for status in donor_responses.values() if status == "no_response")
+        
+        # All contacted donor IDs
+        contacted_ids = set(donor_responses.keys())
+
+        # Match new compatible donors using the request parameters
+        lat = req.get('latitude')
+        lon = req.get('longitude')
+        if lat is not None:
+            lat = float(lat)
+        if lon is not None:
+            lon = float(lon)
+            
+        blood_group = req.get('blood_group')
+        urgency = req.get('urgency', 'Critical')
+
+        all_matches = match_service.match_donors(blood_group, lat, lon, urgency)
+
+        # Filter out already contacted donors
+        next_donors = [d for d in all_matches if d.get('user_id') not in contacted_ids]
+        top_5 = next_donors[:5]
+
+        # Log the escalation event
+        escalation_history = req.get('escalation_history', [])
+        level = len(escalation_history) + 1
+        escalation_event = {
+            "escalation_level": level,
+            "timestamp": datetime.utcnow().isoformat(),
+            "no_response_count": no_response_count,
+            "contacted_count": len(contacted_ids)
+        }
+
+        # Update status to escalated in DB and append history
+        success = db_service.escalate_request_in_db(payload.request_id, escalation_event)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to escalate request in database.")
+
+        # Serialize matched donors response
+        matched_donors = []
+        for d in top_5:
+            ratio_val = d.get('calls_to_donations_ratio')
+            if ratio_val is not None:
+                try:
+                    ratio_val = float(ratio_val)
+                except (ValueError, TypeError):
+                    ratio_val = None
+
+            donations_val = d.get('donations_till_date', 0)
+            try:
+                donations_val = int(donations_val)
+            except (ValueError, TypeError):
+                donations_val = 0
+
+            matched_donors.append({
+                "user_id": d.get("user_id", ""),
+                "blood_group": d.get("blood_group", ""),
+                "gender": d.get("gender"),
+                "donations_till_date": donations_val,
+                "donor_type": d.get("donor_type"),
+                "calls_to_donations_ratio": ratio_val,
+                "distance_km": d.get("distance_km"),
+                "is_soft_eligible": d.get("is_soft_eligible", False),
+                "days_until_eligible": d.get("days_until_eligible")
+            })
+
+        return {
+            "success": True,
+            "message": f"Request escalated successfully. Next 5 compatible donors found.",
+            "matched_donors": matched_donors
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error escalating request: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

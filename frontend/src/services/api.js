@@ -89,6 +89,39 @@ export const api = {
     const response = await apiClient.post('/api/donors/update-location', { user_id: userId, city, state });
     return response.data;
   },
+
+  /**
+   * Get all blood requests
+   * GET /api/requests
+   */
+  getRequests: async () => {
+    const response = await apiClient.get('/api/requests');
+    return response.data;
+  },
+
+  /**
+   * Update outreach response
+   * PATCH /api/outreach/response
+   */
+  updateOutreachResponse: async (requestId, donorId, response) => {
+    const response_data = await apiClient.patch('/api/outreach/response', {
+      request_id: requestId,
+      donor_id: donorId,
+      response
+    });
+    return response_data.data;
+  },
+
+  /**
+   * Escalate request
+   * POST /api/requests/escalate
+   */
+  escalateRequest: async (requestId) => {
+    const response = await apiClient.post('/api/requests/escalate', {
+      request_id: requestId
+    });
+    return response.data;
+  },
 };
 
 export default api;

@@ -2,7 +2,7 @@
 
 import { AlertTriangle, Award, MessageSquare } from 'lucide-react';
 
-export default function MatchTable({ donors, onOutreachClick }) {
+export default function MatchTable({ donors, onOutreachClick, activeRequest = null, onResponseChange = null }) {
   if (!donors || donors.length === 0) {
     return (
       <div className="glass-panel rounded-2xl p-12 text-center border border-gray-800">
@@ -133,15 +133,50 @@ export default function MatchTable({ donors, onOutreachClick }) {
                     </div>
                   </td>
 
-                  {/* Action */}
+                  {/* Action / Response Tracking */}
                   <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={() => onOutreachClick(donor)}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-brand-red text-white hover:bg-brand-darkred active:scale-95 transition-all shadow-md shadow-brand-red/10"
-                    >
-                      <MessageSquare className="w-4 h-4" />
-                      <span>AI Outreach</span>
-                    </button>
+                    {activeRequest && activeRequest.donor_responses && activeRequest.donor_responses[donor.user_id] !== undefined ? (
+                      <div className="flex gap-1.5 justify-end">
+                        <button
+                          onClick={() => onResponseChange && onResponseChange(donor.user_id, 'accepted')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            activeRequest.donor_responses[donor.user_id] === 'accepted'
+                              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/10'
+                              : 'border border-emerald-600/30 text-emerald-400 hover:bg-emerald-600/10'
+                          }`}
+                        >
+                          Accepted
+                        </button>
+                        <button
+                          onClick={() => onResponseChange && onResponseChange(donor.user_id, 'declined')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            activeRequest.donor_responses[donor.user_id] === 'declined'
+                              ? 'bg-rose-600 text-white shadow-md shadow-rose-600/10'
+                              : 'border border-rose-600/30 text-rose-400 hover:bg-rose-600/10'
+                          }`}
+                        >
+                          Declined
+                        </button>
+                        <button
+                          onClick={() => onResponseChange && onResponseChange(donor.user_id, 'no_response')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            activeRequest.donor_responses[donor.user_id] === 'no_response'
+                              ? 'bg-gray-650 text-white border border-gray-600'
+                              : 'border border-gray-700 text-gray-400 hover:bg-gray-800'
+                          }`}
+                        >
+                          No Response
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => onOutreachClick(donor)}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-brand-red text-white hover:bg-brand-darkred active:scale-95 transition-all shadow-md shadow-brand-red/10"
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                        <span>AI Outreach</span>
+                      </button>
+                    )}
                   </td>
                 </tr>
               );

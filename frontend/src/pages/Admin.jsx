@@ -15,6 +15,7 @@ export default function Admin({ onViewDashboard }) {
     blood_group_distribution: {},
     donor_type_breakdown: {}
   });
+  const [requests, setRequests] = useState([]);
 
   const fetchStats = useCallback(async () => {
     setLoading(true);
@@ -22,6 +23,8 @@ export default function Admin({ onViewDashboard }) {
     try {
       const data = await api.getStats();
       setStats(data);
+      const reqRes = await api.getRequests();
+      setRequests(reqRes.requests || []);
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.detail || "Failed to load dashboard statistics. Verify server status.");
@@ -185,6 +188,125 @@ export default function Admin({ onViewDashboard }) {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
+            </div>
+          </div>
+
+          {/* Blood Requests Log Section */}
+          <div className="glass-panel rounded-2xl overflow-hidden border border-gray-800 shadow-xl mt-8">
+            <div className="px-6 py-5 border-b border-gray-800 bg-slate-900/50 flex justify-between items-center">
+              <div>
+                <h3 className="text-md font-bold text-white uppercase tracking-wider">Blood Requests Log</h3>
+                <p className="text-xs text-gray-500">Overview of all created blood requests and donor outreach responses</p>
+              </div>
+              <span className="px-3 py-1 bg-brand-navy/30 border border-brand-navy/50 text-brand-accent rounded-full text-xs font-semibold">
+                {requests.length} Total Requests
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-800 bg-gray-900/30 text-gray-400 text-xs font-semibold uppercase tracking-wider">
+                    <th className="px-6 py-4">Request ID</th>
+                    <th className="px-6 py-4">Patient Name</th>
+                    <th className="px-6 py-4">Blood Group</th>
+                    <th className="px-6 py-4">Urgency</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4 text-center">Donors Contacted</th>
+                    <th className="px-6 py-4 text-center">Responses Received</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-800/60">
+                  {requests.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" className="px-6 py-12 text-center text-gray-500 text-sm">
+                        No requests logged in the database.
+                      </td>
+                    </tr>
+                  ) : (
+                    requests.map((req) => {
+                      const contactedCount = req.donor_responses ? Object.keys(req.donor_responses).length : 0;
+                      const responsesCount = req.donor_responses
+                        ? Object.values(req.donor_responses).filter(status => status === 'accepted' || status === 'declined').length
+                        : 0;
+
+                      const isFulfilled = req.status === 'fulfilled';
+
+                      return (
+                        <tr
+                          key={req.request_id}
+                          className={`transition-colors text-sm ${
+                            isFulfilled
+                              ? 'opacity-60 text-gray-500 bg-gray-900/10 hover:bg-gray-900/20'
+                              : 'hover:bg-slate-900/30 text-gray-300'
+                          }`}
+                        >
+                          {/* Request ID */}
+                          <td className="px-6 py-4 font-mono font-medium truncate max-w-[150px]">
+                            <span title={req.request_id}>
+                              {req.request_id.length > 8 ? `${req.request_id.substring(0, 8)}...` : req.request_id}
+                            </span>
+                          </td>
+
+                          {/* Patient Name */}
+                          <td className={`px-6 py-4 font-semibold ${isFulfilled ? 'text-gray-500' : 'text-white'}`}>
+                            {req.patient_name}
+                          </td>
+
+                          {/* Blood Group */}
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center justify-center px-2.5 py-0.5 text-xs font-bold rounded-full ${
+                              isFulfilled
+                                ? 'bg-gray-800/50 border border-gray-700/50 text-gray-500'
+                                : 'bg-brand-red/10 border border-brand-red/30 text-brand-lightred'
+                            }`}>
+                              {req.blood_group}
+                            </span>
+                          </td>
+
+                          {/* Urgency */}
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold ${
+                              isFulfilled
+                                ? 'bg-gray-850 text-gray-500 border border-gray-800'
+                                : req.urgency === 'Critical'
+                                ? 'bg-rose-500/10 border border-rose-500/30 text-rose-400'
+                                : req.urgency === 'High'
+                                ? 'bg-amber-500/10 border border-amber-500/30 text-amber-400'
+                                : 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'
+                            }`}>
+                              {req.urgency}
+                            </span>
+                          </td>
+
+                          {/* Status */}
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase ${
+                              isFulfilled
+                                ? 'bg-gray-800 border border-gray-700 text-gray-500'
+                                : req.status === 'escalated'
+                                ? 'bg-amber-500/10 border border-amber-500/30 text-amber-400'
+                                : 'bg-brand-navy/20 border border-brand-navy/30 text-brand-accent'
+                            }`}>
+                              {req.status || 'open'}
+                            </span>
+                          </td>
+
+                          {/* Donors Contacted */}
+                          <td className="px-6 py-4 text-center font-bold font-mono">
+                            {contactedCount}
+                          </td>
+
+                          {/* Responses Received */}
+                          <td className="px-6 py-4 text-center font-bold font-mono">
+                            {responsesCount}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
