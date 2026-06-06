@@ -149,3 +149,47 @@ def opt_out_donor_endpoint(
     except Exception as e:
         logger.error(f"Error in donor opt-out endpoint: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+# --- Update Donor Location ---
+
+class DonorUpdateLocationRequest(BaseModel):
+    user_id: str = Field(..., min_length=1)
+    city: str = Field(..., min_length=1, max_length=100)
+    state: str = Field(..., min_length=1, max_length=100)
+
+class DonorUpdateLocationResponse(BaseModel):
+    success: bool
+    message: str
+
+@router.post("/donors/update-location", response_model=DonorUpdateLocationResponse)
+def update_donor_location_endpoint(
+    payload: DonorUpdateLocationRequest,
+    db_service: DynamoDBService = Depends(get_db_service)
+):
+    """
+    POST /api/donors/update-location
+    Updates donor's city and state in DynamoDB.
+    """
+    try:
+        donor = db_service.get_donor(payload.user_id)
+        if not donor:
+            raise HTTPException(status_code=404, detail=f"Donor with ID '{payload.user_id}' not found.")
+
+        success = db_service.update_donor_location(
+            payload.user_id,
+            payload.city.strip(),
+            payload.state.strip()
+        )
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update donor location.")
+
+        return {
+            "success": True,
+            "message": f"Location updated to {payload.city}, {payload.state}."
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in donor update-location endpoint: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

@@ -328,3 +328,52 @@ class DynamoDBService:
         except Exception as e:
             logger.error(f"Error pausing donor {user_id}: {e}")
             return False
+
+    def update_donor_location(self, user_id: str, city: str, state: str) -> bool:
+        """Updates a donor's city and state in DynamoDB."""
+        from decimal import Decimal
+        # State-to-coordinate mapping for updating latitude/longitude
+        state_coords = {
+            "Telangana": (17.3850, 78.4867), "Andhra Pradesh": (16.5062, 80.6480),
+            "Karnataka": (12.9716, 77.5946), "Tamil Nadu": (13.0827, 80.2707),
+            "Maharashtra": (19.0760, 72.8777), "Delhi": (28.7041, 77.1025),
+            "West Bengal": (22.5726, 88.3639), "Gujarat": (23.0225, 72.5714),
+            "Rajasthan": (26.9124, 75.7873), "Uttar Pradesh": (26.8467, 80.9462),
+            "Kerala": (8.5241, 76.9366), "Haryana": (28.4595, 77.0266),
+        }
+
+        if self.use_mock:
+            for item in self.mock_data:
+                if item.get('user_id') == user_id:
+                    item['city'] = city
+                    item['state'] = state
+                    coords = state_coords.get(state)
+                    if coords:
+                        item['latitude'] = Decimal(str(coords[0]))
+                        item['longitude'] = Decimal(str(coords[1]))
+                    logger.info(f"Mock Mode: Updated location for {user_id}")
+                    return True
+            return False
+        try:
+            table = self.get_table()
+            update_expr = "SET city = :city, #st = :state"
+            expr_values = {":city": city, ":state": state}
+            expr_names = {"#st": "state"}  # 'state' is a reserved word in DynamoDB
+
+            coords = state_coords.get(state)
+            if coords:
+                update_expr += ", latitude = :lat, longitude = :lon"
+                expr_values[":lat"] = Decimal(str(coords[0]))
+                expr_values[":lon"] = Decimal(str(coords[1]))
+
+            table.update_item(
+                Key={'user_id': user_id},
+                UpdateExpression=update_expr,
+                ExpressionAttributeValues=expr_values,
+                ExpressionAttributeNames=expr_names
+            )
+            logger.info(f"DynamoDB Mode: Updated location for {user_id} to {city}, {state}")
+            return True
+        except Exception as e:
+            logger.error(f"Error updating location for {user_id}: {e}")
+            return False

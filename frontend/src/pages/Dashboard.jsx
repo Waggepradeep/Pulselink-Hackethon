@@ -207,7 +207,7 @@ export default function Dashboard({ onViewAdmin }) {
                   <Send className="w-5 h-5 text-emerald-400" />
                   <h3 className="text-lg font-bold text-white">Bulk Outreach Messages</h3>
                   <span className="px-2.5 py-0.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-full text-xs font-bold">
-                    {bulkResults.filter(r => !r.error).length} Generated
+                    {bulkResults.length} Language{bulkResults.length > 1 ? 's' : ''}
                   </span>
                 </div>
                 <button
@@ -218,44 +218,46 @@ export default function Dashboard({ onViewAdmin }) {
                 </button>
               </div>
 
-              <div className="max-h-[500px] overflow-y-auto divide-y divide-gray-800/60">
-                {bulkResults.map((result, idx) => (
-                  <div key={result.user_id} className="p-5 hover:bg-slate-900/20 transition-colors">
-                    {result.error ? (
-                      <div className="flex items-center gap-2 text-red-400 text-xs">
-                        <AlertCircle className="w-4 h-4" />
-                        <span className="font-mono">{getShortId(result.user_id)}</span>
-                        <span>— {result.error}</span>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-mono text-gray-400">{getShortId(result.user_id)}</span>
-                            <div className="flex items-center gap-1 text-xs text-brand-accent">
-                              <Globe className="w-3.5 h-3.5" />
-                              <span className="px-1.5 py-0.5 bg-brand-navy/30 border border-brand-navy/50 rounded-full text-[10px] font-bold">
-                                {result.language}
-                              </span>
-                            </div>
+              <div className="max-h-[600px] overflow-y-auto divide-y divide-gray-800/60">
+                {bulkResults.map((group, idx) => (
+                  <div key={group.language} className="p-5 hover:bg-slate-900/20 transition-colors">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 text-xs text-brand-accent">
+                            <Globe className="w-4 h-4" />
+                            <span className="px-2 py-0.5 bg-brand-navy/30 border border-brand-navy/50 rounded-full text-xs font-bold">
+                              {group.language}
+                            </span>
                           </div>
-                          <button
-                            onClick={() => handleBulkCopy(idx, result.message)}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
-                              bulkCopied === idx
-                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                                : 'border-gray-700/50 text-gray-400 hover:text-white hover:bg-gray-800'
-                            }`}
-                          >
-                            {bulkCopied === idx ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                            <span>{bulkCopied === idx ? 'Copied!' : 'Copy'}</span>
-                          </button>
+                          <span className="text-[10px] text-gray-500 font-semibold">
+                            {group.donor_ids?.length || 0} donor{(group.donor_ids?.length || 0) > 1 ? 's' : ''}
+                          </span>
                         </div>
-                        <div className="p-3 rounded-xl bg-gray-950/80 border border-gray-800/50 text-gray-300 text-xs leading-relaxed whitespace-pre-wrap max-h-40 overflow-y-auto">
-                          {result.message}
-                        </div>
+                        <button
+                          onClick={() => handleBulkCopy(idx, group.message)}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                            bulkCopied === idx
+                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                              : 'border-gray-700/50 text-gray-400 hover:text-white hover:bg-gray-800'
+                          }`}
+                        >
+                          {bulkCopied === idx ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                          <span>{bulkCopied === idx ? 'Copied!' : 'Copy'}</span>
+                        </button>
                       </div>
-                    )}
+                      <div className="p-4 rounded-xl bg-gray-950/80 border border-gray-800/50 text-gray-300 text-sm leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto">
+                        {group.message}
+                      </div>
+                      {/* Donor IDs chips */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {(group.donor_ids || []).map(uid => (
+                          <span key={uid} className="text-[10px] font-mono px-2 py-0.5 bg-gray-900 border border-gray-800 rounded-md text-gray-500" title={uid}>
+                            {getShortId(uid)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

@@ -26,7 +26,7 @@ export default function MatchTable({ donors, onOutreachClick }) {
       <div className="px-6 py-5 border-b border-gray-800 bg-slate-900/50 flex justify-between items-center">
         <div>
           <h3 className="text-lg font-bold text-white">Top Compatible Matches</h3>
-          <p className="text-xs text-gray-400">Showing top 10 eligible active donors sorted by donation history</p>
+          <p className="text-xs text-gray-400">Showing top 10 eligible active donors ranked by AI match score</p>
         </div>
         <span className="px-3 py-1 bg-brand-navy/30 border border-brand-navy/50 text-brand-accent rounded-full text-xs font-semibold">
           {donors.length} Matches Found
@@ -42,6 +42,7 @@ export default function MatchTable({ donors, onOutreachClick }) {
               <th className="px-6 py-4">Blood Group</th>
               <th className="px-6 py-4">Gender</th>
               <th className="px-6 py-4">Donations</th>
+              <th className="px-6 py-4 text-center">Match Score</th>
               <th className="px-6 py-4 text-center">Calls : Donation Ratio</th>
               <th className="px-6 py-4 text-right">Outreach</th>
             </tr>
@@ -89,6 +90,19 @@ export default function MatchTable({ donors, onOutreachClick }) {
                       <Award className="w-4 h-4 text-amber-500" />
                       <span>{donor.donations_till_date}</span>
                     </div>
+                  </td>
+
+                  {/* Match Score */}
+                  <td className="px-6 py-4 text-center">
+                    <span className={`inline-flex items-center justify-center px-2.5 py-1 text-xs font-bold rounded-full ${
+                      (donor.match_score || 0) >= 70
+                        ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'
+                        : (donor.match_score || 0) >= 40
+                        ? 'bg-amber-500/10 border border-amber-500/30 text-amber-400'
+                        : 'bg-gray-800 border border-gray-700/50 text-gray-400'
+                    }`}>
+                      {donor.match_score || 0}
+                    </span>
                   </td>
 
                   {/* Calls to Donations Ratio */}

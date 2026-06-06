@@ -5,8 +5,10 @@ from pydantic import BaseModel
 from backend.services.dynamodb_service import DynamoDBService
 from backend.services.bedrock_service import BedrockService
 from backend.utils.location_mapper import resolve_location
+import logging
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 # Dependency injections
 def get_db_service():
@@ -63,19 +65,18 @@ def generate_outreach_endpoint(
         raise HTTPException(status_code=500, detail=f"An error occurred while generating outreach message: {str(e)}")
 
 
-# --- Bulk Outreach ---
+# --- Smart Bulk Outreach (grouped by language) ---
 
 class BulkOutreachRequest(BaseModel):
     user_ids: list[str]
 
-class BulkOutreachItem(BaseModel):
-    user_id: str
+class BulkOutreachGroupItem(BaseModel):
     language: str
     message: str
-    error: str = ""
+    donor_ids: list[str]
 
 class BulkOutreachResponse(BaseModel):
-    results: list[BulkOutreachItem]
+    results: list[BulkOutreachGroupItem]
 
 @router.post("/outreach/bulk", response_model=BulkOutreachResponse)
 def generate_bulk_outreach_endpoint(
@@ -85,14 +86,16 @@ def generate_bulk_outreach_endpoint(
 ):
     """
     POST /api/outreach/bulk
-    Generates outreach messages for a list of donor user_ids.
+    Groups donors by detected language, generates ONE bilingual message per group,
+    and returns [{language, message, donor_ids}].
     """
-    results = []
+    # Step 1: Resolve language for each donor and group them
+    language_groups = {}  # { language: { "donor_ids": [...], "sample_donor": {...}, "state": "..." } }
+
     for uid in payload.user_ids:
         try:
             donor = db_service.get_donor(uid)
             if not donor:
-                results.append({"user_id": uid, "language": "", "message": "", "error": "Donor not found"})
                 continue
 
             lat = donor.get('latitude')
@@ -102,9 +105,37 @@ def generate_bulk_outreach_endpoint(
             if lat is not None and lon is not None:
                 state, language = resolve_location(lat, lon)
 
-            message = bedrock_service.generate_outreach_message(donor, state, language)
-            results.append({"user_id": uid, "language": language, "message": message, "error": ""})
+            if language not in language_groups:
+                language_groups[language] = {
+                    "donor_ids": [],
+                    "sample_donor": donor,
+                    "state": state
+                }
+            language_groups[language]["donor_ids"].append(uid)
         except Exception as e:
-            results.append({"user_id": uid, "language": "", "message": "", "error": str(e)})
+            logger.warning(f"Error resolving donor {uid}: {e}")
+            continue
+
+    # Step 2: Generate ONE message per language group using the sample donor
+    results = []
+    for language, group_data in language_groups.items():
+        try:
+            message = bedrock_service.generate_outreach_message(
+                group_data["sample_donor"],
+                group_data["state"],
+                language
+            )
+            results.append({
+                "language": language,
+                "message": message,
+                "donor_ids": group_data["donor_ids"]
+            })
+        except Exception as e:
+            logger.error(f"Error generating message for language {language}: {e}")
+            results.append({
+                "language": language,
+                "message": f"Failed to generate message: {str(e)}",
+                "donor_ids": group_data["donor_ids"]
+            })
 
     return {"results": results}

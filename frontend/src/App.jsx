@@ -5,7 +5,8 @@ import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
 import RegisterDonor from './pages/RegisterDonor';
 import CreateRequest from './pages/CreateRequest';
-import { HeartHandshake, BarChart3, UserPlus, Home, FileHeart } from 'lucide-react';
+import DonorPortal from './pages/DonorPortal';
+import { HeartHandshake, BarChart3, UserPlus, Home, FileHeart, User } from 'lucide-react';
 
 function App() {
   const [currentView, setCurrentView] = useState('dashboard');
@@ -75,6 +76,18 @@ function App() {
                 <BarChart3 className="w-3.5 h-3.5" />
                 <span>Admin Insights</span>
               </button>
+
+              <button
+                onClick={() => setCurrentView('portal')}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  currentView === 'portal'
+                    ? 'bg-brand-red text-white shadow-md shadow-brand-red/10'
+                    : 'text-gray-400 hover:text-white hover:bg-slate-900/50'
+                }`}
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>Donor Portal</span>
+              </button>
             </div>
           </div>
         </div>
@@ -88,6 +101,8 @@ function App() {
           <Admin onViewDashboard={() => setCurrentView('dashboard')} />
         ) : currentView === 'request' ? (
           <CreateRequest onViewDashboard={() => setCurrentView('dashboard')} />
+        ) : currentView === 'portal' ? (
+          <DonorPortal onViewDashboard={() => setCurrentView('dashboard')} />
         ) : (
           <RegisterDonor onViewDashboard={() => setCurrentView('dashboard')} />
         )}

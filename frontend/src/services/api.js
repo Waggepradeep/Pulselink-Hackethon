@@ -75,6 +75,15 @@ export const api = {
     const response = await apiClient.post('/api/outreach/bulk', { user_ids: userIds });
     return response.data;
   },
+
+  /**
+   * Update Donor Location
+   * POST /api/donors/update-location
+   */
+  updateDonorLocation: async (userId, city, state) => {
+    const response = await apiClient.post('/api/donors/update-location', { user_id: userId, city, state });
+    return response.data;
+  },
 };
 
 export default api;

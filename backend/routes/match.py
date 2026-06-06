@@ -32,6 +32,7 @@ class DonorResponse(BaseModel):
     donor_type: str
     user_donation_active_status: str
     calls_to_donations_ratio: Optional[Decimal] = None
+    match_score: Optional[float] = 0.0
 
     class Config:
         json_encoders = {

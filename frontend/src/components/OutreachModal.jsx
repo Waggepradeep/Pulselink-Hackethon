@@ -1,7 +1,7 @@
 // frontend/src/components/OutreachModal.jsx
 
 import { useState, useEffect, useCallback } from 'react';
-import { X, Copy, Check, RefreshCw, Send, MessageSquare, Globe, AlertCircle, PauseCircle } from 'lucide-react';
+import { X, Copy, Check, RefreshCw, Send, MessageSquare, Globe, AlertCircle } from 'lucide-react';
 import api from '../services/api';
 
 export default function OutreachModal({ donor, onClose }) {
@@ -9,8 +9,6 @@ export default function OutreachModal({ donor, onClose }) {
   const [error, setError] = useState(null);
   const [outreachData, setOutreachData] = useState({ language: '', message: '' });
   const [copied, setCopied] = useState(false);
-  const [pauseLoading, setPauseLoading] = useState(false);
-  const [paused, setPaused] = useState(false);
 
   const fetchOutreachMessage = useCallback(async () => {
     setLoading(true);
@@ -48,20 +46,6 @@ export default function OutreachModal({ donor, onClose }) {
     const encodedText = encodeURIComponent(outreachData.message);
     const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedText}`;
     window.open(whatsappUrl, '_blank');
-  };
-
-  const handlePauseDonor = async () => {
-    setPauseLoading(true);
-    try {
-      const res = await api.optOutDonor(donor.user_id, 'Paused via outreach modal');
-      if (res.success) {
-        setPaused(true);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setPauseLoading(false);
-    }
   };
 
   const getShortId = (id) => {
@@ -185,25 +169,6 @@ export default function OutreachModal({ donor, onClose }) {
                     <Send className="w-4 h-4" />
                     <span>Open in WhatsApp</span>
                   </button>
-                </div>
-
-                {/* Pause Donations Button */}
-                <div className="pt-2 border-t border-gray-800/50">
-                  {paused ? (
-                    <div className="flex items-center gap-2 text-amber-400 text-xs font-medium p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                      <PauseCircle className="w-4 h-4" />
-                      <span>Donor has been paused from future donation requests.</span>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={handlePauseDonor}
-                      disabled={pauseLoading}
-                      className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold border border-amber-500/30 text-amber-400 bg-amber-500/5 hover:bg-amber-500/10 transition-all disabled:opacity-50 cursor-pointer"
-                    >
-                      <PauseCircle className="w-4 h-4" />
-                      <span>{pauseLoading ? 'Pausing...' : 'Pause Donations for This Donor'}</span>
-                    </button>
-                  )}
                 </div>
               </div>
             )}
