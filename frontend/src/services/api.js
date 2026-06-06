@@ -17,8 +17,12 @@ export const api = {
    * Smart Donor Matching
    * POST /api/match
    */
-  matchDonors: async (bloodGroup) => {
-    const response = await apiClient.post('/api/match', { blood_group: bloodGroup });
+  matchDonors: async (bloodGroup, latitude = null, longitude = null) => {
+    const response = await apiClient.post('/api/match', { 
+      blood_group: bloodGroup,
+      latitude,
+      longitude
+    });
     return response.data;
   },
 

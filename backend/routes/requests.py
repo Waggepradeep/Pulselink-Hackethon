@@ -36,6 +36,8 @@ class BloodRequestCreate(BaseModel):
     hospital_state: str = Field(default="", max_length=100)
     contact_phone: str = Field(..., min_length=5, max_length=20)
     units_required: int = Field(..., ge=1, le=50)
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
     @field_validator('blood_group')
     @classmethod
@@ -70,6 +72,7 @@ class MatchedDonorBrief(BaseModel):
     donations_till_date: Optional[int] = 0
     donor_type: Optional[str] = None
     calls_to_donations_ratio: Optional[float] = None
+    distance_km: Optional[float] = None
 
 
 class BloodRequestResponse(BaseModel):
@@ -96,6 +99,15 @@ def create_blood_request(
         # Generate a unique request_id
         request_id = str(uuid.uuid4())
 
+        # Resolve coordinates
+        lat = payload.latitude
+        lon = payload.longitude
+        if lat is None or lon is None:
+            state_clean = payload.hospital_state.strip().title()
+            from backend.utils.location_mapper import STATE_CENTROIDS
+            if state_clean in STATE_CENTROIDS:
+                lat, lon = STATE_CENTROIDS[state_clean]
+
         # Build the request record
         request_item = {
             "request_id": request_id,
@@ -108,7 +120,9 @@ def create_blood_request(
             "contact_phone": payload.contact_phone.strip(),
             "units_required": payload.units_required,
             "status": "open",
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": datetime.utcnow().isoformat(),
+            "latitude": lat,
+            "longitude": lon
         }
 
         # Save the request to DynamoDB
@@ -117,7 +131,7 @@ def create_blood_request(
             raise HTTPException(status_code=500, detail="Failed to save blood request to database.")
 
         # Run matching to find top 5 donors
-        all_matches = match_service.match_donors(payload.blood_group)
+        all_matches = match_service.match_donors(payload.blood_group, lat, lon)
         top_5 = all_matches[:5]
 
         # Serialize matched donors for response
@@ -143,6 +157,7 @@ def create_blood_request(
                 "donations_till_date": donations_val,
                 "donor_type": d.get("donor_type"),
                 "calls_to_donations_ratio": ratio_val,
+                "distance_km": d.get("distance_km")
             })
 
         return {

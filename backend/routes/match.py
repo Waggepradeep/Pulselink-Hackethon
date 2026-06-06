@@ -17,6 +17,8 @@ def get_matching_service():
 # Pydantic Schemas
 class MatchRequest(BaseModel):
     blood_group: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 class DonorResponse(BaseModel):
     user_id: str
@@ -33,6 +35,7 @@ class DonorResponse(BaseModel):
     user_donation_active_status: str
     calls_to_donations_ratio: Optional[Decimal] = None
     match_score: Optional[float] = 0.0
+    distance_km: Optional[float] = None
 
     class Config:
         json_encoders = {
@@ -47,7 +50,7 @@ def match_donors_endpoint(payload: MatchRequest, match_service: MatchingService 
     """
     POST /api/match
     Returns top 10 eligible active donors compatible with the requested blood group,
-    sorted by number of donations till date descending.
+    sorted by match_score descending.
     """
     try:
         # Validate blood group input
@@ -58,7 +61,7 @@ def match_donors_endpoint(payload: MatchRequest, match_service: MatchingService 
         if bg not in valid_groups:
             raise HTTPException(status_code=400, detail=f"Invalid blood group requested: '{payload.blood_group}'")
 
-        results = match_service.match_donors(payload.blood_group)
+        results = match_service.match_donors(payload.blood_group, payload.latitude, payload.longitude)
         return {"matches": results}
     except HTTPException as he:
         raise he

@@ -41,6 +41,7 @@ export default function MatchTable({ donors, onOutreachClick }) {
               <th className="px-6 py-4">Role</th>
               <th className="px-6 py-4">Blood Group</th>
               <th className="px-6 py-4">Gender</th>
+              <th className="px-6 py-4">Distance</th>
               <th className="px-6 py-4">Donations</th>
               <th className="px-6 py-4 text-center">Match Score</th>
               <th className="px-6 py-4 text-center">Calls : Donation Ratio</th>
@@ -82,6 +83,17 @@ export default function MatchTable({ donors, onOutreachClick }) {
                   {/* Gender */}
                   <td className="px-6 py-4 text-gray-400">
                     {donor.gender || 'Not Specified'}
+                  </td>
+
+                  {/* Distance */}
+                  <td className="px-6 py-4 text-gray-400">
+                    {donor.distance_km !== undefined && donor.distance_km !== null ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-brand-navy/40 text-brand-accent border border-brand-navy/30">
+                        {donor.distance_km} km
+                      </span>
+                    ) : (
+                      <span className="text-gray-600">—</span>
+                    )}
                   </td>
 
                   {/* Donations till date */}

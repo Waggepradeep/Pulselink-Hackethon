@@ -1,7 +1,7 @@
 // frontend/src/pages/CreateRequest.jsx
 
 import { useState } from 'react';
-import { FileHeart, CheckCircle, ArrowLeft, AlertTriangle, Award, Droplets, Clock, Zap } from 'lucide-react';
+import { FileHeart, CheckCircle, ArrowLeft, AlertTriangle, Award, Droplets, Clock, Zap, MapPin, Compass, Loader2 } from 'lucide-react';
 import api from '../services/api';
 
 const URGENCY_CONFIG = {
@@ -20,9 +20,12 @@ export default function CreateRequest({ onViewDashboard }) {
     hospital_state: '',
     contact_phone: '',
     units_required: 1,
+    latitude: null,
+    longitude: null,
   });
 
   const [loading, setLoading] = useState(false);
+  const [gpsLocating, setGpsLocating] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null); // holds { request_id, matched_donors }
 
@@ -32,6 +35,32 @@ export default function CreateRequest({ onViewDashboard }) {
       ...prev,
       [name]: name === 'units_required' ? parseInt(value) || 1 : value,
     }));
+  };
+
+  const detectGPS = () => {
+    setGpsLocating(true);
+    setError(null);
+    if (!navigator.geolocation) {
+      setError("Geolocation is not supported by your browser.");
+      setGpsLocating(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setFormData((prev) => ({
+          ...prev,
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        }));
+        setGpsLocating(false);
+      },
+      (err) => {
+        console.error(err);
+        setError("Failed to retrieve browser location coordinates. Please verify permission settings.");
+        setGpsLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
   const handleSubmit = async (e) => {
@@ -82,6 +111,8 @@ export default function CreateRequest({ onViewDashboard }) {
       hospital_state: '',
       contact_phone: '',
       units_required: 1,
+      latitude: null,
+      longitude: null,
     });
   };
 
@@ -156,6 +187,7 @@ export default function CreateRequest({ onViewDashboard }) {
                           <th className="px-6 py-3">Donor ID</th>
                           <th className="px-6 py-3">Blood Group</th>
                           <th className="px-6 py-3">Gender</th>
+                          <th className="px-6 py-3">Distance</th>
                           <th className="px-6 py-3">Donations</th>
                           <th className="px-6 py-3">Type</th>
                         </tr>
@@ -176,6 +208,15 @@ export default function CreateRequest({ onViewDashboard }) {
                               </span>
                             </td>
                             <td className="px-6 py-3 text-gray-400">{donor.gender || 'N/A'}</td>
+                            <td className="px-6 py-3 text-gray-400">
+                              {donor.distance_km !== undefined && donor.distance_km !== null ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold bg-brand-navy/40 text-brand-accent border border-brand-navy/30">
+                                  {donor.distance_km} km
+                                </span>
+                              ) : (
+                                <span className="text-gray-600">—</span>
+                              )}
+                            </td>
                             <td className="px-6 py-3">
                               <div className="flex items-center gap-1.5 font-semibold text-white">
                                 <Award className="w-4 h-4 text-amber-500" />
@@ -333,6 +374,28 @@ export default function CreateRequest({ onViewDashboard }) {
                   />
                 </div>
 
+                {/* Hospital State */}
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="hospital_state" className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    Hospital State
+                  </label>
+                  <select
+                    id="hospital_state"
+                    name="hospital_state"
+                    required
+                    value={formData.hospital_state}
+                    onChange={handleChange}
+                    className="w-full bg-slate-900/60 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-brand-red transition-colors cursor-pointer"
+                  >
+                    <option value="" disabled>Select State</option>
+                    <option value="Karnataka">Karnataka</option>
+                    <option value="Telangana">Telangana</option>
+                    <option value="Tamil Nadu">Tamil Nadu</option>
+                    <option value="Andhra Pradesh">Andhra Pradesh</option>
+                    <option value="Maharashtra">Maharashtra</option>
+                  </select>
+                </div>
+
                 {/* Units Required */}
                 <div className="flex flex-col gap-2">
                   <label htmlFor="units_required" className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
@@ -369,6 +432,43 @@ export default function CreateRequest({ onViewDashboard }) {
                     onChange={handleChange}
                     className="w-full bg-slate-900/60 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-brand-red transition-colors"
                   />
+                </div>
+              </div>
+
+              {/* Geolocation Section */}
+              <div className="bg-gray-900/40 border border-gray-800 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-brand-red" />
+                    <span>Hospital Coordinates (GPS)</span>
+                  </h4>
+                  <p className="text-xs text-gray-400 mt-1 max-w-md">
+                    Pinpoint exact GPS location to search for nearest donors. If disabled, defaults to state centroid fallback.
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={detectGPS}
+                    disabled={gpsLocating}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                      formData.latitude
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                        : 'bg-brand-navy/30 border-brand-navy/50 text-brand-accent hover:bg-brand-navy/50'
+                    }`}
+                  >
+                    {gpsLocating ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Compass className="w-3.5 h-3.5" />
+                    )}
+                    <span>{formData.latitude ? 'Location Locked' : 'Detect Coords'}</span>
+                  </button>
+                  {formData.latitude && (
+                    <div className="text-[10px] font-mono text-emerald-400 opacity-90">
+                      {formData.latitude.toFixed(4)}, {formData.longitude.toFixed(4)}
+                    </div>
+                  )}
                 </div>
               </div>
 

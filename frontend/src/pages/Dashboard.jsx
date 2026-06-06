@@ -14,12 +14,52 @@ export default function Dashboard({ onViewAdmin }) {
   const [hasSearched, setHasSearched] = useState(false);
   const [selectedDonor, setSelectedDonor] = useState(null);
 
+  // Geolocation states
+  const [useNearbyGPS, setUseNearbyGPS] = useState(false);
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [latitude, setLatitude] = useState(null);
+  const [longitude, setLongitude] = useState(null);
+
   // Bulk outreach state
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkResults, setBulkResults] = useState(null);
   const [bulkCopied, setBulkCopied] = useState(null);
 
   const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+  const handleGPSToggle = () => {
+    if (useNearbyGPS) {
+      setUseNearbyGPS(false);
+      setLatitude(null);
+      setLongitude(null);
+      return;
+    }
+
+    setGpsLoading(true);
+    setError(null);
+
+    if (!navigator.geolocation) {
+      setError("Geolocation is not supported by your browser.");
+      setGpsLoading(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLatitude(position.coords.latitude);
+        setLongitude(position.coords.longitude);
+        setUseNearbyGPS(true);
+        setGpsLoading(false);
+      },
+      (err) => {
+        console.error(err);
+        setError("Failed to retrieve browser location. Please enable location permissions.");
+        setGpsLoading(false);
+        setUseNearbyGPS(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -28,7 +68,7 @@ export default function Dashboard({ onViewAdmin }) {
     setHasSearched(true);
     setBulkResults(null);
     try {
-      const data = await api.matchDonors(bloodGroup);
+      const data = await api.matchDonors(bloodGroup, useNearbyGPS ? latitude : null, useNearbyGPS ? longitude : null);
       setDonors(data.matches || []);
     } catch (err) {
       console.error(err);
@@ -44,6 +84,9 @@ export default function Dashboard({ onViewAdmin }) {
     setHasSearched(false);
     setError(null);
     setBulkResults(null);
+    setUseNearbyGPS(false);
+    setLatitude(null);
+    setLongitude(null);
   };
 
   const handleBulkOutreach = async () => {
@@ -124,6 +167,39 @@ export default function Dashboard({ onViewAdmin }) {
                     <option key={bg} value={bg}>{bg}</option>
                   ))}
                 </select>
+              </div>
+
+              {/* Nearby Match Proximity Toggle */}
+              <div className="bg-gray-900/40 border border-gray-800/80 rounded-xl p-3.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-300">Nearby Matches (GPS)</span>
+                  <button
+                    type="button"
+                    onClick={handleGPSToggle}
+                    disabled={gpsLoading}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      useNearbyGPS ? 'bg-brand-red' : 'bg-gray-800'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        useNearbyGPS ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+                {gpsLoading && (
+                  <div className="flex items-center gap-2 text-[10px] text-brand-accent animate-pulse">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <span>Detecting browser location...</span>
+                  </div>
+                )}
+                {useNearbyGPS && latitude && (
+                  <div className="text-[10px] text-emerald-400 font-mono flex flex-col gap-0.5">
+                    <span>✓ Coordinates locked:</span>
+                    <span className="opacity-80">Lat: {latitude.toFixed(4)}, Lon: {longitude.toFixed(4)}</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-col gap-3 pt-2">
