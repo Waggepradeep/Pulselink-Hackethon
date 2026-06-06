@@ -1,7 +1,7 @@
 // frontend/src/pages/Dashboard.jsx
 
 import { useState } from 'react';
-import { Search, RotateCcw, ShieldCheck, HeartHandshake, Loader2, AlertCircle, BarChart3 } from 'lucide-react';
+import { Search, RotateCcw, ShieldCheck, HeartHandshake, Loader2, AlertCircle, BarChart3, Send, X, Globe, Copy, Check } from 'lucide-react';
 import api from '../services/api';
 import MatchTable from '../components/MatchTable';
 import OutreachModal from '../components/OutreachModal';
@@ -14,6 +14,11 @@ export default function Dashboard({ onViewAdmin }) {
   const [hasSearched, setHasSearched] = useState(false);
   const [selectedDonor, setSelectedDonor] = useState(null);
 
+  // Bulk outreach state
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkResults, setBulkResults] = useState(null);
+  const [bulkCopied, setBulkCopied] = useState(null);
+
   const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
   const handleSearch = async (e) => {
@@ -21,6 +26,7 @@ export default function Dashboard({ onViewAdmin }) {
     setLoading(true);
     setError(null);
     setHasSearched(true);
+    setBulkResults(null);
     try {
       const data = await api.matchDonors(bloodGroup);
       setDonors(data.matches || []);
@@ -37,6 +43,34 @@ export default function Dashboard({ onViewAdmin }) {
     setDonors([]);
     setHasSearched(false);
     setError(null);
+    setBulkResults(null);
+  };
+
+  const handleBulkOutreach = async () => {
+    if (!donors || donors.length === 0) return;
+    setBulkLoading(true);
+    setBulkResults(null);
+    try {
+      const userIds = donors.map(d => d.user_id);
+      const data = await api.bulkOutreach(userIds);
+      setBulkResults(data.results || []);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to generate bulk outreach messages.");
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const handleBulkCopy = (idx, message) => {
+    navigator.clipboard.writeText(message);
+    setBulkCopied(idx);
+    setTimeout(() => setBulkCopied(null), 2000);
+  };
+
+  const getShortId = (id) => {
+    if (!id) return '';
+    return id.length > 12 ? `${id.substring(0, 6)}...${id.substring(id.length - 6)}` : id;
   };
 
   return (
@@ -118,6 +152,25 @@ export default function Dashboard({ onViewAdmin }) {
                 )}
               </div>
             </form>
+
+            {/* Bulk Outreach Button */}
+            {donors.length > 0 && !bulkResults && (
+              <div className="mt-6 pt-6 border-t border-gray-800">
+                <button
+                  onClick={handleBulkOutreach}
+                  disabled={bulkLoading}
+                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-lg shadow-emerald-600/10 active:scale-95 disabled:opacity-50 cursor-pointer"
+                >
+                  {bulkLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                  <span>{bulkLoading ? 'Generating...' : `Outreach All ${donors.length} Donors`}</span>
+                </button>
+                <p className="text-[10px] text-gray-500 text-center mt-2">Generate AI messages for all matched donors at once</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -144,6 +197,69 @@ export default function Dashboard({ onViewAdmin }) {
               donors={donors} 
               onOutreachClick={(donor) => setSelectedDonor(donor)} 
             />
+          )}
+
+          {/* Bulk Outreach Results Panel */}
+          {bulkResults && bulkResults.length > 0 && (
+            <div className="glass-panel rounded-2xl overflow-hidden border border-gray-800 shadow-2xl animate-fade-in">
+              <div className="px-6 py-5 border-b border-gray-800 bg-slate-900/50 flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Send className="w-5 h-5 text-emerald-400" />
+                  <h3 className="text-lg font-bold text-white">Bulk Outreach Messages</h3>
+                  <span className="px-2.5 py-0.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-full text-xs font-bold">
+                    {bulkResults.filter(r => !r.error).length} Generated
+                  </span>
+                </div>
+                <button
+                  onClick={() => setBulkResults(null)}
+                  className="p-1.5 rounded-lg bg-gray-800/80 hover:bg-gray-700/80 text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="max-h-[500px] overflow-y-auto divide-y divide-gray-800/60">
+                {bulkResults.map((result, idx) => (
+                  <div key={result.user_id} className="p-5 hover:bg-slate-900/20 transition-colors">
+                    {result.error ? (
+                      <div className="flex items-center gap-2 text-red-400 text-xs">
+                        <AlertCircle className="w-4 h-4" />
+                        <span className="font-mono">{getShortId(result.user_id)}</span>
+                        <span>— {result.error}</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-mono text-gray-400">{getShortId(result.user_id)}</span>
+                            <div className="flex items-center gap-1 text-xs text-brand-accent">
+                              <Globe className="w-3.5 h-3.5" />
+                              <span className="px-1.5 py-0.5 bg-brand-navy/30 border border-brand-navy/50 rounded-full text-[10px] font-bold">
+                                {result.language}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleBulkCopy(idx, result.message)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                              bulkCopied === idx
+                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                                : 'border-gray-700/50 text-gray-400 hover:text-white hover:bg-gray-800'
+                            }`}
+                          >
+                            {bulkCopied === idx ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                            <span>{bulkCopied === idx ? 'Copied!' : 'Copy'}</span>
+                          </button>
+                        </div>
+                        <div className="p-3 rounded-xl bg-gray-950/80 border border-gray-800/50 text-gray-300 text-xs leading-relaxed whitespace-pre-wrap max-h-40 overflow-y-auto">
+                          {result.message}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       </div>

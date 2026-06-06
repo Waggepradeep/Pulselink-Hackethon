@@ -57,6 +57,24 @@ export const api = {
     const response = await apiClient.post('/api/requests/create', requestData);
     return response.data;
   },
+
+  /**
+   * Donor Opt-Out (Pause Donations)
+   * POST /api/donors/opt-out
+   */
+  optOutDonor: async (userId, reason = '') => {
+    const response = await apiClient.post('/api/donors/opt-out', { user_id: userId, reason });
+    return response.data;
+  },
+
+  /**
+   * Bulk Outreach
+   * POST /api/outreach/bulk
+   */
+  bulkOutreach: async (userIds) => {
+    const response = await apiClient.post('/api/outreach/bulk', { user_ids: userIds });
+    return response.data;
+  },
 };
 
 export default api;

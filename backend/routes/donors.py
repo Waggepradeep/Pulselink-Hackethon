@@ -108,3 +108,44 @@ def register_donor_endpoint(
     except Exception as e:
         logger.error(f"Error in donor registration endpoint: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+# --- Donor Opt-Out (Pause Donations) ---
+
+class DonorOptOutRequest(BaseModel):
+    user_id: str = Field(..., min_length=1)
+    reason: str = Field(default="")
+
+class DonorOptOutResponse(BaseModel):
+    success: bool
+    message: str
+
+@router.post("/donors/opt-out", response_model=DonorOptOutResponse)
+def opt_out_donor_endpoint(
+    payload: DonorOptOutRequest,
+    db_service: DynamoDBService = Depends(get_db_service)
+):
+    """
+    POST /api/donors/opt-out
+    Sets donor's user_donation_active_status to "Paused" in DynamoDB.
+    """
+    try:
+        # Verify donor exists
+        donor = db_service.get_donor(payload.user_id)
+        if not donor:
+            raise HTTPException(status_code=404, detail=f"Donor with ID '{payload.user_id}' not found.")
+
+        # Update status to Paused
+        success = db_service.pause_donor(payload.user_id, payload.reason)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update donor status.")
+
+        return {
+            "success": True,
+            "message": "Donor has been paused from receiving donation requests."
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in donor opt-out endpoint: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

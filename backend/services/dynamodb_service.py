@@ -299,3 +299,32 @@ class DynamoDBService:
             logger.error(f"Error saving blood request: {e}")
             return False
 
+    def pause_donor(self, user_id: str, reason: str = "") -> bool:
+        """Updates a donor's active status to 'Paused' in DynamoDB."""
+        if self.use_mock:
+            for item in self.mock_data:
+                if item.get('user_id') == user_id:
+                    item['user_donation_active_status'] = 'Paused'
+                    if reason:
+                        item['pause_reason'] = reason
+                    logger.info(f"Mock Mode: Paused donor {user_id}")
+                    return True
+            return False
+        try:
+            table = self.get_table()
+            update_expr = "SET user_donation_active_status = :status"
+            expr_values = {":status": "Paused"}
+            if reason:
+                update_expr += ", pause_reason = :reason"
+                expr_values[":reason"] = reason
+
+            table.update_item(
+                Key={'user_id': user_id},
+                UpdateExpression=update_expr,
+                ExpressionAttributeValues=expr_values
+            )
+            logger.info(f"DynamoDB Mode: Paused donor {user_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error pausing donor {user_id}: {e}")
+            return False
