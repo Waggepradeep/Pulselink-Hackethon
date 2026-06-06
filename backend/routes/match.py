@@ -19,6 +19,7 @@ class MatchRequest(BaseModel):
     blood_group: str
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    urgency: Optional[str] = None
 
 class DonorResponse(BaseModel):
     user_id: str
@@ -36,6 +37,10 @@ class DonorResponse(BaseModel):
     calls_to_donations_ratio: Optional[Decimal] = None
     match_score: Optional[float] = 0.0
     distance_km: Optional[float] = None
+    is_soft_eligible: Optional[bool] = False
+    days_until_eligible: Optional[int] = None
+    fatigue_applied: Optional[bool] = False
+    loyalty_boost_applied: Optional[bool] = False
 
     class Config:
         json_encoders = {
@@ -61,7 +66,7 @@ def match_donors_endpoint(payload: MatchRequest, match_service: MatchingService 
         if bg not in valid_groups:
             raise HTTPException(status_code=400, detail=f"Invalid blood group requested: '{payload.blood_group}'")
 
-        results = match_service.match_donors(payload.blood_group, payload.latitude, payload.longitude)
+        results = match_service.match_donors(payload.blood_group, payload.latitude, payload.longitude, payload.urgency)
         return {"matches": results}
     except HTTPException as he:
         raise he

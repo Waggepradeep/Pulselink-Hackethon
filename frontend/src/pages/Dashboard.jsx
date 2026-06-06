@@ -20,6 +20,9 @@ export default function Dashboard({ onViewAdmin }) {
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
 
+  // Urgency state
+  const [urgency, setUrgency] = useState('Critical');
+
   // Bulk outreach state
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkResults, setBulkResults] = useState(null);
@@ -68,7 +71,12 @@ export default function Dashboard({ onViewAdmin }) {
     setHasSearched(true);
     setBulkResults(null);
     try {
-      const data = await api.matchDonors(bloodGroup, useNearbyGPS ? latitude : null, useNearbyGPS ? longitude : null);
+      const data = await api.matchDonors(
+        bloodGroup, 
+        useNearbyGPS ? latitude : null, 
+        useNearbyGPS ? longitude : null,
+        urgency
+      );
       setDonors(data.matches || []);
     } catch (err) {
       console.error(err);
@@ -87,6 +95,7 @@ export default function Dashboard({ onViewAdmin }) {
     setUseNearbyGPS(false);
     setLatitude(null);
     setLongitude(null);
+    setUrgency('Critical');
   };
 
   const handleBulkOutreach = async () => {
@@ -166,6 +175,23 @@ export default function Dashboard({ onViewAdmin }) {
                   {bloodGroups.map((bg) => (
                     <option key={bg} value={bg}>{bg}</option>
                   ))}
+                </select>
+              </div>
+
+              {/* Urgency Level Selector */}
+              <div>
+                <label htmlFor="urgency-level" className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                  Urgency Level
+                </label>
+                <select
+                  id="urgency-level"
+                  value={urgency}
+                  onChange={(e) => setUrgency(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white font-bold text-sm focus:outline-none focus:border-brand-red focus:ring-1 focus:ring-brand-red transition-all cursor-pointer font-semibold"
+                >
+                  <option value="Critical">Critical (Strict Eligibility)</option>
+                  <option value="High">High (Strict Eligibility)</option>
+                  <option value="Routine">Routine (Soft Eligibility)</option>
                 </select>
               </div>
 

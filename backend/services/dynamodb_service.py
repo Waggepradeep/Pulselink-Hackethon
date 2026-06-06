@@ -80,6 +80,12 @@ class DynamoDBService:
                     except ValueError:
                         continue
 
+                    freq_days = r.get('frequency_in_days')
+                    try:
+                        frequency_in_days = int(float(freq_days)) if freq_days else 0
+                    except ValueError:
+                        frequency_in_days = 0
+
                     # Create record matching the DynamoDB schema
                     item = {
                         "user_id": user_id,
@@ -94,7 +100,9 @@ class DynamoDBService:
                         "eligibility_status": r.get('eligibility_status') or "not eligible",
                         "donor_type": r.get('donor_type') or "Other",
                         "user_donation_active_status": r.get('user_donation_active_status') or "Inactive",
-                        "calls_to_donations_ratio": Decimal(str(ratio))
+                        "calls_to_donations_ratio": Decimal(str(ratio)),
+                        "last_contacted_date": r.get('last_contacted_date') or None,
+                        "frequency_in_days": frequency_in_days
                     }
                     # Filter out None values
                     item = {k: v for k, v in item.items() if v is not None}
@@ -166,21 +174,18 @@ class DynamoDBService:
             bg_set = set(blood_groups)
             filtered = [
                 item for item in self.mock_data
-                if item.get('eligibility_status') == 'eligible'
-                and item.get('user_donation_active_status') == 'Active'
+                if item.get('user_donation_active_status') == 'Active'
                 and item.get('blood_group') in bg_set
             ]
             return filtered
 
         table = self.get_table()
         filter_expression = (
-            "eligibility_status = :eligible AND "
             "user_donation_active_status = :active AND "
             "blood_group IN (" + ", ".join(f":bg{i}" for i in range(len(blood_groups))) + ")"
         )
         
         expression_values = {
-            ":eligible": "eligible",
             ":active": "Active"
         }
         for i, bg in enumerate(blood_groups):

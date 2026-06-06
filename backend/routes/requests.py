@@ -73,6 +73,8 @@ class MatchedDonorBrief(BaseModel):
     donor_type: Optional[str] = None
     calls_to_donations_ratio: Optional[float] = None
     distance_km: Optional[float] = None
+    is_soft_eligible: Optional[bool] = False
+    days_until_eligible: Optional[int] = None
 
 
 class BloodRequestResponse(BaseModel):
@@ -131,7 +133,7 @@ def create_blood_request(
             raise HTTPException(status_code=500, detail="Failed to save blood request to database.")
 
         # Run matching to find top 5 donors
-        all_matches = match_service.match_donors(payload.blood_group, lat, lon)
+        all_matches = match_service.match_donors(payload.blood_group, lat, lon, payload.urgency)
         top_5 = all_matches[:5]
 
         # Serialize matched donors for response
@@ -157,7 +159,9 @@ def create_blood_request(
                 "donations_till_date": donations_val,
                 "donor_type": d.get("donor_type"),
                 "calls_to_donations_ratio": ratio_val,
-                "distance_km": d.get("distance_km")
+                "distance_km": d.get("distance_km"),
+                "is_soft_eligible": d.get("is_soft_eligible", False),
+                "days_until_eligible": d.get("days_until_eligible")
             })
 
         return {

@@ -144,7 +144,9 @@ def load_data(csv_path="Dataset.csv"):
                     "eligibility_status": r.get('eligibility_status') or "not eligible",
                     "donor_type": r.get('donor_type') or "Other",
                     "user_donation_active_status": r.get('user_donation_active_status') or "Inactive",
-                    "calls_to_donations_ratio": clean_decimal(r.get('calls_to_donations_ratio'))
+                    "calls_to_donations_ratio": clean_decimal(r.get('calls_to_donations_ratio')),
+                    "last_contacted_date": r.get('last_contacted_date') or None,
+                    "frequency_in_days": clean_int(r.get('frequency_in_days'))
                 }
                 
                 # Filter out None values to keep DynamoDB items clean
