@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-darkred: #7f1d1d;
+  --color-brand-red: #b91c1c;
+  --color-brand-lightred: #fca5a5;
+  --color-brand-navy: #1e3a8a;
+  --color-brand-darknavy: #0f172a;
+  --color-brand-slate: #1e293b;
+  --color-brand-accent: #3b82f6;
+}
+
+@source "../index.html";
+@source "./**/*.{js,jsx,ts,tsx}";
+
+:root {
+  font-family: 'Outfit', 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: dark;
+  color: #f8fafc;
+  background-color: #090d16;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-image: 
+    radial-gradient(at 0% 0%, hsla(0, 72%, 10%, 0.5) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, hsla(220, 72%, 10%, 0.5) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, hsla(0, 0%, 5%, 0.8) 0px, transparent 100%);
+  background-attachment: fixed;
+}
+
+/* Glassmorphism Card Style */
+.glass-panel {
+  background: rgba(21, 29, 48, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-panel-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-panel-hover:hover {
+  transform: translateY(-2px);
+  background: rgba(21, 29, 48, 0.6);
+  border-color: rgba(185, 28, 28, 0.2); /* Soft blood-red glow on hover */
+  box-shadow: 0 10px 30px -10px rgba(185, 28, 28, 0.15);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #090d16;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Pulse animation for active donor states */
+@keyframes heartPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.8;
+  }
+}
+
+.heart-pulse {
+  animation: heartPulse 2s infinite ease-in-out;
+}
+
+/* Gradient text */
+.text-gradient-red {
+  background: linear-gradient(135deg, #f87171 0%, #b91c1c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-navy {
+  background: linear-gradient(135deg, #60a5fa 0%, #1d4ed8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

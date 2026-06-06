@@ -1,0 +1,32 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Environment variables (contains AWS secrets)
+.env
+backend/.env
+
+# Node
+node_modules/
+frontend/node_modules/
+
+# Logs
+*.log
+import.log
+import_errors.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated
+location_map.json
