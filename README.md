@@ -8,15 +8,18 @@ It streamlines the workflow for Thalassemia patient coordinators by identifying 
 
 ## 🚀 Key Features
 
-1. **Smart Donor Matching Dashboard**: 
+1. **Smart Weighted Donor Matching**: 
    - Dynamically searches compatible donor groups based on recipient compatibility rules.
    - Filters for active eligible donors (`eligibility_status = "eligible"` and `user_donation_active_status = "Active"`).
-   - Renders the top 10 matches, sorted by `donations_till_date` descending.
+   - Calculates a real-time **Match Score (out of 100)**: Proximity (30% weight), Donation Frequency (30% weight), Calls-to-Donations Ratio (20% weight), Days since last donation (10% weight), and loyalty type (10% weight).
+   - Handles donor fatigue with a **-15 points penalty** if contacted within 7 days.
+   - Offers **Soft Eligibility matching** for Routine requests (matches donors who become eligible in the next 14 days, applying a **-20 points penalty**).
+   - Rewards consistency with a **+10 points loyalty boost** if the donation request aligns with their average donation cycle.
 
-2. **AI-Powered Regional Outreach Assistant**: 
+2. **AI-Powered Bilingual Outreach**: 
    - Resolves donor state and language using coordinates (`latitude`/`longitude`).
    - Uses **AWS Bedrock Claude Haiku** to draft polite, respectful, WhatsApp-ready messages.
-   - Direct integration for copying message drafts or sharing via WhatsApp API.
+   - **Bilingual Bulk Outreach Assistant**: Groups matched donors by language and generates single bilingual messages per language group to prevent spamming coordinators.
 
 3. **Closed-Loop Outreach Response Tracking**:
    - Integrates response status tracking buttons (`Accepted`, `Declined`, `No Response`) directly into the dashboard table.
@@ -32,12 +35,15 @@ It streamlines the workflow for Thalassemia patient coordinators by identifying 
    - A dropdown at the top of the dashboard allows coordinators to select an active patient request context.
    - Selecting a request locks matching parameters (blood group, urgency, and coordinates) to maintain operational safety and prevent coordinator search errors.
 
-6. **Admin Analytics & Requests Log**:
+6. **Donor Self-Service Portal**:
+   - A dedicated portal for donors to view their registry profile status, toggle their availability (Active/Paused), select reasons for pausing, and update their city and state (which dynamically computes coordinates).
+
+7. **Admin Analytics & Requests Log**:
    - Real-time aggregated statistics (Total Donors, Eligible Donors, Eligibility Rate).
    - High-performance Recharts visualization for blood group distributions and donor type breakdowns.
    - A comprehensive Requests Log table displaying all requests, urgency color-coding, donor counts, and response status counts.
 
-7. **Robust Offline/Mock Mode**:
+8. **Robust Offline/Mock Mode**:
    - If AWS credentials are not configured, the backend automatically flags and switches to a local CSV database parsing mode (`Dataset.csv`).
    - It also uses local language templates if Bedrock is inaccessible, ensuring the application remains **100% operational** out-of-the-box for evaluators.
 
