@@ -213,7 +213,7 @@ Maps coordinates to local Indian language and drafts a regionalized outreach scr
   ```json
   {
     "language": "Telugu",
-    "message": "నమస్కారం! 🙏\n\n*Blood Warriors* సంస్థ నుండి ఒక ప్రేమపూర్వక విజ్ఞప్తి - మీ O+ రక్తం ఒక థాలసీమియా బాధితమైన చిన్న బిడ్డకు జీవం ఇవ్వగలదు. మీ రక్తం దానం చేయడానికి సిద్ధంగా ఉంటే దయచేసి ఈ సందేశానికి రిప్లై ఇవ్వండి. ధన్యవాదాలు! 🤝"
+    "message": "నమస్కారం! 🙏\n\n*Blood Warriors* ಸಂಸ್ಥ నుండి ఒక ప్రేమపూర్వక విజ్ఞప్తి - మీ O+ రక్తం ఒక థాలసీమియా బాధితమైన చిన్న బిడ్డకు జీవం ఇవ్వగలదు. మీ రక్తం దానం చేయడానికి సిద్ధంగా ఉంటే దయచేసి ఈ సందేశానికి రిప్లై ఇవ్వండి. ధన్యవాదాలు! 🤝"
   }
   ```
 
@@ -242,5 +242,169 @@ Fetches aggregate distributions for admin dashboard charts.
       "One-Time Donor": 2291,
       "Other": 688
     }
+  }
+  ```
+
+### 4. Create Blood Request
+Registers a new patient blood request.
+
+* **Path**: `/api/requests/create`
+* **Method**: `POST`
+* **Request Body**:
+  ```json
+  {
+    "patient_name": "John Doe",
+    "blood_group": "O-",
+    "urgency": "Routine",
+    "hospital_name": "Lakeshore Hospital",
+    "hospital_city": "Hyderabad",
+    "hospital_state": "Telangana",
+    "contact_phone": "9998887777",
+    "units_required": 3,
+    "latitude": 17.3850,
+    "longitude": 78.4867
+  }
+  ```
+* **Response Body**:
+  ```json
+  {
+    "success": true,
+    "request_id": "b0b0cafc-d274-4a1e-acb1-93e675069e28",
+    "message": "Blood request created. Found 5 compatible donors.",
+    "matched_donors": [...]
+  }
+  ```
+
+### 5. Fetch Blood Requests
+Retrieves all blood requests logged in the system.
+
+* **Path**: `/api/requests`
+* **Method**: `GET`
+* **Response Body**:
+  ```json
+  {
+    "requests": [
+      {
+        "request_id": "b0b0cafc-d274-4a1e-acb1-93e675069e28",
+        "patient_name": "John Doe",
+        "blood_group": "O-",
+        "status": "open",
+        "donor_responses": {
+          "\\x20d115f...": "no_response"
+        },
+        "escalation_history": []
+      }
+    ]
+  }
+  ```
+
+### 6. Track Outreach Response
+Updates a donor's outreach response status for a request.
+
+* **Path**: `/api/outreach/response`
+* **Method**: `PATCH`
+* **Request Body**:
+  ```json
+  {
+    "request_id": "b0b0cafc-d274-4a1e-acb1-93e675069e28",
+    "donor_id": "\\x20d115f...",
+    "response": "accepted"
+  }
+  ```
+* **Response Body**:
+  ```json
+  {
+    "success": true,
+    "message": "Outreach response updated successfully."
+  }
+  ```
+
+### 7. Escalate Blood Request
+Escalates a request and retrieves the next batch of matches.
+
+* **Path**: `/api/requests/escalate`
+* **Method**: `POST`
+* **Request Body**:
+  ```json
+  {
+    "request_id": "b0b0cafc-d274-4a1e-acb1-93e675069e28"
+  }
+  ```
+* **Response Body**:
+  ```json
+  {
+    "success": true,
+    "message": "Request escalated successfully. Next 5 compatible donors found.",
+    "matched_donors": [...]
+  }
+  ```
+
+### 8. Register Donor
+Registers a new blood donor.
+
+* **Path**: `/api/donors/register`
+* **Method**: `POST`
+* **Request Body**:
+  ```json
+  {
+    "name": "Jane Smith",
+    "phone": "9998887777",
+    "blood_group": "O+",
+    "gender": "Female",
+    "city": "Hyderabad",
+    "state": "Telangana",
+    "latitude": 17.3850,
+    "longitude": 78.4867,
+    "language_preference": "English",
+    "consent_to_contact": true
+  }
+  ```
+* **Response Body**:
+  ```json
+  {
+    "success": true,
+    "user_id": "\\x2cd115d...",
+    "message": "Donor registered successfully."
+  }
+  ```
+
+### 9. Pause Donor Availability
+Pauses a donor's active status.
+
+* **Path**: `/api/donors/opt-out`
+* **Method**: `POST`
+* **Request Body**:
+  ```json
+  {
+    "user_id": "\\x2cd115d...",
+    "reason": "Travel"
+  }
+  ```
+* **Response Body**:
+  ```json
+  {
+    "success": true,
+    "message": "Donor has been paused from receiving donation requests."
+  }
+  ```
+
+### 10. Update Donor Location
+Updates a donor's city and state coordinates.
+
+* **Path**: `/api/donors/update-location`
+* **Method**: `POST`
+* **Request Body**:
+  ```json
+  {
+    "user_id": "\\x2cd115d...",
+    "city": "Bangalore",
+    "state": "Karnataka"
+  }
+  ```
+* **Response Body**:
+  ```json
+  {
+    "success": true,
+    "message": "Location updated to Bangalore, Karnataka."
   }
   ```

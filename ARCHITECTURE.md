@@ -21,28 +21,30 @@ graph TD
     API_Client -->|REST API calls over HTTP| Backend[FastAPI Server]
 
     subgraph FastAPI Backend App (Uvicorn Server)
-        Backend -->|Route Matching| Match_Route[/api/match]
-        Backend -->|Route Outreach| Outreach_Route[/api/outreach]
-        Backend -->|Route Stats| Stats_Route[/api/stats]
+        Backend -->|Matching & Requests| Match_Route[/api/match & /api/requests/*]
+        Backend -->|Outreach & Responses| Outreach_Route[/api/outreach & /api/outreach/response]
+        Backend -->|Analytics Stats| Stats_Route[/api/stats]
 
         Match_Route --> Matching_Service[MatchingService]
         Outreach_Route --> Bedrock_Service[BedrockService]
-        Stats_Route --> Stats_Service[DynamoDBService]
+        Stats_Route --> DB_Service[DynamoDBService]
 
         Matching_Service --> Compatibility_Util[compatibility.py Matrix]
-        Matching_Service --> Stats_Service
+        Matching_Service --> DB_Service
+        Bedrock_Service --> DB_Service
         
         Bedrock_Service --> Location_Mapper[location_mapper.py Offline Geocoder]
         Location_Mapper --> Location_Map[(location_map.json State Boundaries)]
     end
 
     subgraph AWS Cloud Resources (us-east-1)
-        Stats_Service -->|Scan/Get Query| DynamoDB_Table[(AWS DynamoDB Table: BloodBridge_Donors)]
+        DB_Service -->|Write/Scan Donors| Donors_Table[(AWS DynamoDB Table: BloodBridge_Donors)]
+        DB_Service -->|Write/Scan Requests| Requests_Table[(AWS DynamoDB Table: BloodBridge_Requests)]
         Bedrock_Service -->|InvokeModel API| Bedrock_Claude[(AWS Bedrock: Claude Haiku 4.5)]
     end
 
     subgraph Resilient Offline Fallbacks (Local System)
-        Stats_Service -.->|Mock Database Fallback| CSV_Mock[(In-Memory CSV Reader: Dataset.csv)]
+        DB_Service -.->|Mock Database Fallback| CSV_Mock[(In-Memory CSV Reader & Mock Lists)]
         Bedrock_Service -.->|Mock Outreach Fallback| Local_Templates[Native Language Templates]
     end
 ```
@@ -54,9 +56,9 @@ graph TD
 ### A. Presentation Layer (Vite + React.js + Tailwind CSS v4)
 * **Branding & Visuals**: Premium dark-mode interface utilizing HSL tailored red gradients and navy blue overlays, maintaining high visual hierarchy and responsive grid layouts.
 * **Views**:
-  * **Coordinator Dashboard**: Interactive interface allowing coordinators to select a recipient blood group, search compatible matches, view metrics, copy messages, and open WhatsApp Web.
-  * **Admin Insights**: Real-time analytics view compiling total registration numbers, eligibility rates, and rendering distributions via modular SVG charts using **Recharts**.
-* **API Client (`api.js`)**: Configured with an Axios instance pointing to the backend host (default: `http://localhost:8000`), encapsulating matching, outreach, and metrics endpoints.
+  * **Coordinator Dashboard**: Interactive interface allowing coordinators to select an active request context, locking the search parameters (blood group, urgency, coordinates) to prevent errors. Includes a match table with action triggers to update outreach statuses (`Accepted`, `Declined`, `No Response`) and trigger request escalations.
+  * **Admin Insights**: Real-time analytics view compiling total registration numbers, eligibility rates, rendering distributions via modular SVG charts using **Recharts**, and a Requests Log table for listing and tracking all requests.
+* **API Client (`api.js`)**: Encapsulates matching, outreach, request creation, requests list, response status updates, and escalation endpoints.
 
 ### B. Application Server Layer (FastAPI + Uvicorn)
 * **Asynchronous Design**: Built on FastAPI's ASGI implementation to process multiple API requests concurrently with minimal memory usage.
@@ -64,15 +66,21 @@ graph TD
   * `POST /api/match`: Takes recipient blood type, returns compatible donors.
   * `POST /api/outreach`: Takes donor ID, returns language and custom WhatsApp text.
   * `GET /api/stats`: Returns database aggregations for charts.
+  * `POST /api/requests/create`: Creates a new patient blood request.
+  * `GET /api/requests`: Retrieves all logged requests.
+  * `PATCH /api/outreach/response`: Records a donor response (fulfilled if accepted, reverts back to open/escalated if reverted).
+  * `POST /api/requests/escalate`: Excludes contacted donors, gets next 5 matches, logs history, sets status to escalated.
 * **Services Layer**:
-  * **Matching Service**: Translates blood group compatibility matrices (`compatibility.py`) and queries database records.
+  * **Matching Service**: Translates blood group compatibility matrices (`compatibility.py`) and queries database records. Also handles urgency and soft-eligibility.
   * **Bedrock Service**: Initializes the Boto3 Bedrock Runtime client and executes inference prompts.
-  * **DynamoDB Service**: Coordinates database connections and performs projected attribute scans.
+  * **DynamoDB Service**: Coordinates database connections, scans, updates request responses, and writes escalation history logs.
 
 ### C. Storage & Database Layer (AWS DynamoDB)
-* **NoSQL Model**: Relies on a single-partition key design (`user_id` as String partition key) supporting rapid, $O(1)$ key-value lookups when reading single donor records.
+* **Multi-Table Model**:
+  - `BloodBridge_Donors`: Hashed by `user_id` partition key, storing donor registration information, eligibility statuses, locations, and historical statistics.
+  - `BloodBridge_Requests`: Hashed by `request_id` partition key, storing patient details, urgency, coordinates, contacted donor responses (`donor_responses` map), and escalation metrics (`escalation_history` list).
 * **Batch Importer**: The `load_data.py` script validates inputs and leverages the DynamoDB `batch_writer()` to upload records in chunks of 25 to optimize write capacities.
-* **Projected Scans**: Queries only read specific projected attributes (`blood_group, donor_type, eligibility_status`) when fetching analytics statistics to optimize performance and reduce AWS read unit costs.
+* **Projected Scans**: Queries only read specific projected attributes when fetching analytics statistics to optimize performance and reduce AWS read unit costs.
 
 ### D. Geolocation & Spatial Layer
 * **Offline Centroid Mapper**: Employs `location_mapper.py` to calculate Euclidean distances between donor coordinates and Indian state reference centroids.
@@ -141,6 +149,40 @@ sequenceDiagram
     FE-->>Coordinator: Opens modal showing message draft
     Coordinator->>FE: Click "Open in WhatsApp"
     Note over FE: Launches whatsapp://send?phone=...&text=...
+```
+
+### C. Closed-Loop Response & Escalation Pipeline
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Coordinator as Thalassemia Coordinator
+    participant FE as React Frontend
+    participant BE as FastAPI Backend
+    participant DB as AWS DynamoDB (Requests Table)
+    participant Match as MatchingService
+
+    alt Coordinator records a response
+        Coordinator->>FE: Click response button (Accepted/Declined/No Response)
+        FE->>BE: PATCH /api/outreach/response {"request_id", "donor_id", "response"}
+        BE->>DB: update_request_response()
+        Note over DB: Saves response to donor_responses map.<br/>Sets status='fulfilled' if accepted.<br/>Reverts status to 'open'/'escalated' if reverted.
+        DB-->>BE: Success status
+        BE-->>FE: Return success
+        FE-->>Coordinator: Updates UI status badge and buttons
+    else Coordinator triggers escalation (>= 3 no_responses)
+        Coordinator->>FE: Click "Escalate Request"
+        FE->>BE: POST /api/requests/escalate {"request_id"}
+        BE->>DB: Get request profile & contacted list
+        DB-->>BE: Return profile details (contacted list, blood group, coordinates)
+        BE->>Match: match_donors(blood_group, lat, lon, urgency)
+        Match-->>BE: Return compatible eligible matching donors
+        Note over BE: Filters out already contacted donors.<br/>Slices to next 5 candidates.
+        BE->>DB: escalate_request_in_db()
+        Note over DB: Updates status='escalated' and<br/>appends event to escalation_history.
+        DB-->>BE: Success status
+        BE-->>FE: Return JSON {"success": true, "matched_donors": [...]}
+        FE-->>Coordinator: Renders next 5 donor matches & escalation log history
+    end
 ```
 
 ---

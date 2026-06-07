@@ -18,11 +18,26 @@ It streamlines the workflow for Thalassemia patient coordinators by identifying 
    - Uses **AWS Bedrock Claude Haiku** to draft polite, respectful, WhatsApp-ready messages.
    - Direct integration for copying message drafts or sharing via WhatsApp API.
 
-3. **Admin Analytics Dashboard**: 
+3. **Closed-Loop Outreach Response Tracking**:
+   - Integrates response status tracking buttons (`Accepted`, `Declined`, `No Response`) directly into the dashboard table.
+   - Automatically updates overall request status to `fulfilled` when a donor accepts.
+   - Dynamically reverts request status back to `open` or `escalated` if a coordinator reverts an `accepted` status by mistake.
+
+4. **Automated Request Escalation**:
+   - Coordinators can trigger request escalation if 3 or more contacted donors remain unresponsive.
+   - The matching engine queries the next 5 compatible matches, strictly excluding already contacted donors.
+   - Logs chronological escalation history records (timestamps, contacted count, no-response count) directly in the database.
+
+5. **Active Request Context Locking**:
+   - A dropdown at the top of the dashboard allows coordinators to select an active patient request context.
+   - Selecting a request locks matching parameters (blood group, urgency, and coordinates) to maintain operational safety and prevent coordinator search errors.
+
+6. **Admin Analytics & Requests Log**:
    - Real-time aggregated statistics (Total Donors, Eligible Donors, Eligibility Rate).
    - High-performance Recharts visualization for blood group distributions and donor type breakdowns.
+   - A comprehensive Requests Log table displaying all requests, urgency color-coding, donor counts, and response status counts.
 
-4. **Robust Offline/Mock Mode**:
+7. **Robust Offline/Mock Mode**:
    - If AWS credentials are not configured, the backend automatically flags and switches to a local CSV database parsing mode (`Dataset.csv`).
    - It also uses local language templates if Bedrock is inaccessible, ensuring the application remains **100% operational** out-of-the-box for evaluators.
 
