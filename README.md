@@ -72,44 +72,48 @@ Pulselink-Hackethon/
 │   ├── app.py                        # Main FastAPI server entry point
 │   ├── .env                          # Backend configurations (region, table, models)
 │   ├── requirements.txt              # Backend python packages list
+│   ├── test_new_features.py          # Automated unit test suite (runs offline/mock)
 │   │
 │   ├── routes/
-│   │   ├── match.py                  # POST /api/match endpoint
-│   │   ├── outreach.py               # POST /api/outreach endpoint
-│   │   └── stats.py                  # GET /api/stats endpoint
+│   │   ├── donors.py                 # Registration, opt-out, and location update endpoints
+│   │   ├── match.py                  # POST /api/match compatibility matching endpoint
+│   │   ├── outreach.py               # POST /api/outreach & response tracking endpoints
+│   │   ├── requests.py               # Blood request creation and escalation endpoints
+│   │   └── stats.py                  # GET /api/stats analytics endpoint
 │   │
 │   ├── services/
-│   │   ├── dynamodb_service.py       # AWS DynamoDB client and local CSV fallback wrapper
-│   │   ├── bedrock_service.py        # AWS Bedrock Claude Haiku API driver and message fallbacks
-│   │   └── matching_service.py       # Core donor-group compatibility search algorithm
+│   │   ├── dynamodb_service.py       # AWS DynamoDB service client & local fallback
+│   │   ├── bedrock_service.py        # AWS Bedrock runtime client & local message fallbacks
+│   │   └── matching_service.py       # Smart weighted matching algorithm
 │   │
 │   └── utils/
 │       ├── compatibility.py          # Recipient-to-donor blood compatibility rules
-│       ├── location_map.json         # Static copy of coordinate-to-language database
-│       └── location_mapper.py        # Offline reverse-geocoding coordinate lookup
+│       ├── location_map.json         # Coordinate-to-language static database
+│       └── location_mapper.py        # Reverse geocoding centroid resolver
 │
 └── frontend/
     ├── src/
     │   ├── main.jsx                  # React DOM entry point
-    │   ├── App.jsx                   # Navigation layout and page router
-    │   ├── index.css                 # Tailwind v4 directives and custom glassmorphism styles
+    │   ├── App.jsx                   # Global navigation navbar and route manager
+    │   ├── index.css                 # Tailwind CSS (v4) styles & glassmorphism system
     │   │
     │   ├── components/
-    │   │   ├── MatchTable.jsx        # Renders matched donors table and action triggers
-    │   │   ├── OutreachModal.jsx     # AI outreach generator card, copy and WhatsApp hooks
-    │   │   └── StatsCards.jsx        # Admin stats metric indicator cards
+    │   │   ├── MatchTable.jsx        # Renders compatibility results & action buttons
+    │   │   ├── OutreachModal.jsx     # AI regional outreach text generator & copy tool
+    │   │   └── StatsCards.jsx        # Dashboard metric indicator display cards
     │   │
     │   ├── pages/
-    │   │   ├── Dashboard.jsx         # Coordinator search dashboard
-    │   │   └── Admin.jsx             # Admin analytics metrics and Recharts pie charts
+    │   │   ├── Dashboard.jsx         # Coordinator search panel & active context view
+    │   │   ├── Admin.jsx             # Recharts distributions & Requests Log dashboard
+    │   │   ├── CreateRequest.jsx     # Blood request creation form (coordinates pinpointing)
+    │   │   ├── DonorPortal.jsx       # Donor self-service portal (location & pauses)
+    │   │   └── RegisterDonor.jsx     # Donor registration form
     │   │
     │   └── services/
-    │       └── api.js                # Axios client configurations
+    │       └── api.js                # Axios HTTP client configuration & endpoint routes
     │
-    ├── tailwind.config.js            # Tailwind v4 configuration file
-    ├── postcss.config.js             # PostCSS Tailwind plugin loader
-    ├── package.json                  # Frontend node dependencies
-    └── index.html                    # Scaffolding markup, SEO meta tags, and fonts
+    ├── package.json                  # Frontend dependencies and npm scripts
+    └── index.html                    # Scaffolding markup, fonts, and meta tags
 ```
 
 ---
