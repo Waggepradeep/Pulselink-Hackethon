@@ -1,7 +1,7 @@
 // frontend/src/pages/Dashboard.jsx
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, RotateCcw, ShieldCheck, HeartHandshake, Loader2, AlertCircle, BarChart3, Send, X, Globe, Copy, Check } from 'lucide-react';
+import { Search, RotateCcw, ShieldCheck, HeartHandshake, Loader2, AlertCircle, Send, X, Globe, Copy, Check } from 'lucide-react';
 import api from '../services/api';
 import MatchTable from '../components/MatchTable';
 import OutreachModal from '../components/OutreachModal';
@@ -266,15 +266,6 @@ export default function Dashboard({ onViewAdmin }) {
             <p className="text-sm text-gray-400 mt-1">Smart Donor Matching Assistant for Thalassemia Coordinators</p>
           </div>
         </div>
-        
-        {/* Navigation to Admin */}
-        <button
-          onClick={onViewAdmin}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-brand-navy/30 border border-brand-navy/50 text-brand-accent hover:bg-brand-navy/50 hover:text-white transition-all shadow-md active:scale-95"
-        >
-          <BarChart3 className="w-4 h-4" />
-          <span>Admin Insights</span>
-        </button>
       </header>
 
       {/* Main Panel grid */}
