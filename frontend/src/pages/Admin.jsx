@@ -1,7 +1,7 @@
 // frontend/src/pages/Admin.jsx
 
 import { useState, useEffect, useCallback } from 'react';
-import { BarChart3, Home, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { BarChart3, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import api from '../services/api';
 import StatsCards from '../components/StatsCards';
@@ -73,25 +73,15 @@ export default function Admin({ onViewDashboard }) {
           </div>
         </div>
         
-        {/* Navigation back to Dashboard */}
-        <div className="flex gap-3">
-          <button
-            onClick={fetchStats}
-            disabled={loading}
-            className="p-2.5 rounded-xl bg-gray-900 border border-gray-850 text-gray-400 hover:text-white hover:bg-gray-800/80 transition-all active:scale-95 disabled:opacity-50"
-            title="Refresh Statistics"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-          
-          <button
-            onClick={onViewDashboard}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-brand-red text-white hover:bg-brand-darkred transition-all shadow-md active:scale-95 shadow-brand-red/10"
-          >
-            <Home className="w-4 h-4" />
-            <span>Coordinator View</span>
-          </button>
-        </div>
+        {/* Refresh Statistics */}
+        <button
+          onClick={fetchStats}
+          disabled={loading}
+          className="p-2.5 rounded-xl bg-gray-900 border border-gray-850 text-gray-400 hover:text-white hover:bg-gray-800/80 transition-all active:scale-95 disabled:opacity-50"
+          title="Refresh Statistics"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+        </button>
       </header>
 
       {error && (
